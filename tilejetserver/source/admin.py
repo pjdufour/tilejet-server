@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.conf import settings
 
-from ittc.source.models import TileOrigin, TileOriginPattern, TileSource
+from tilejetserver.source.models import TileOrigin, TileOriginPattern, TileSource
 
 class TileOriginAdmin(admin.ModelAdmin):
     model = TileOrigin
