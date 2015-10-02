@@ -13,6 +13,28 @@ The [Humanitarian Information Unit](https://hiu.state.gov/Pages/Home.aspx) has b
 ### Imagery to the Crowd
 The [Imagery to the Crowd Initiative](http://mapgive.state.gov/ittc/) (or IttC) is a core initiative of the [Humanitarian Information Unit](https://hiu.state.gov/Pages/Home.aspx).  Through IttC, HIU publishes high-resolution commercial satellite imagery, purchased by the United States Government, in a web-based format that can be easily mapped by volunteers.  These imagery services are used by volunteers to add baseline geographic data into [OpenStreetMap](http://www.openstreetmap.org/), such as roads and buildings.  The imagery processing pipeline is built from opensource applications, such as TileCache and GeoServer.  All tools developed by HIU for ITTC, are also open source, such as this repo.  More information can be found at [http://mapgive.state.gov/ittc/](http://mapgive.state.gov/ittc/).
 
+## Provision
+
+Before you begin the installation process, you'll need to provision a virtual or physical machine.  TileJet Server will run on [Amazon Web Services (AWS)](#aws-machines), [Vagrant](#vagrant-machines), and almost any type of virtual machine.
+
+Most VMs, AMIs, boxes, etc. of Ubuntu 14.04.X won't be 100% up to date when provisioned.  Although not necessary, you should upgrade all your packages as soon as you SSH into the machine for the first time and before you begin the installation process.  In Ubuntu that is: `sudo apt-get update; sudo apt-get upgrade;`.
+
+### AWS Machines
+If you are provisioning an instance using Amazon Web Services, we recommend you use the baseline Ubuntu 14.04 LTS AMI managed by Ubuntu/Canonical.  You can lookup the most recent ami code on this page: [https://cloud-images.ubuntu.com/releases/trusty/release/](https://cloud-images.ubuntu.com/releases/trusty/release/).  Generally speaking, you should use the 64-bit EBS-SSD AMI for TileJet Server.
+
+### Vagrant Machines
+
+If you are installing TileJet Server on a Vagrant VM it is a good idea to assert the correct locale through the following code block.  Most other builds, such as the Amazon AWS Ubuntu images, do not need this step as they are configured properly.  See issue 985 for explanation at [https://github.com/GeoNode/geonode/issues/985](https://github.com/GeoNode/geonode/issues/985).
+
+```shell
+export LANGUAGE=en_US.UTF-8
+export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+
+locale-gen en_US.UTF-8
+dpkg-reconfigure locales
+```
+
 ## Installation
 
 As root (`sudo su -`), execute the following commands:
