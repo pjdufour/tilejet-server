@@ -20,4 +20,4 @@ if 'tilejetserver.cache' in settings.INSTALLED_APPS:
     )
 
 if 'tilejetserver.proxy' in settings.INSTALLED_APPS:
-    urlpatterns += ittc.proxy.urls.urlpatterns
+    urlpatterns += tilejetserver.proxy.urls.urlpatterns
