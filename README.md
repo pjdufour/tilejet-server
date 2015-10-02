@@ -43,8 +43,10 @@ As root (`sudo su -`), execute the following commands:
 apt-get update
 apt-get install -y curl vim git nginx
 apt-get install -y memcached zlib1g-dev libjpeg-dev rabbitmq-server
-apt-get install -y libapache2-mod-python python-dev python-pip
+apt-get install -y python-dev python-pip
 apt-get install -y supervisor
+# Install Python Virtual Environment libraries
+pip install virtualenvwrapper paver
 ```
 
 Then, as ubuntu, clone this repo with commands like the following.
@@ -54,6 +56,19 @@ cd ~
 git clone https://github.com/tilejet/tilejet-server.git tilejet-server.git
 ```
 
+Make virtual environment `tilejet`.
+
+```
+# Add Virtual Environment Setup to ~/.bash_aliases
+echo 'export VIRTUALENVWRAPPER_PYTHON=/usr/bin/python' >> ~/.bash_aliases
+echo 'export WORKON_HOME=~/.venvs' >> ~/.bash_aliases
+echo 'source /usr/local/bin/virtualenvwrapper.sh'>> ~/.bash_aliases
+echo 'export PIP_DOWNLOAD_CACHE=$HOME/.pip-downloads' >> ~/.bash_aliases
+# Make TileJet Virtual Environment
+source ~/.bash_aliases
+mkvirtualenv tilejet
+workon tilejet
+````
 Then, as root, then install python packages with:
 ```
 cd tilejet-server.git
@@ -63,20 +78,22 @@ pip install -r requirements.txt
 If there are any issues with celery be correctly configured, run pip install for the following packages from https://github.com/tilejet/celery/blob/umemcache/requirements/dev.txt manually.
 
 ```
-sudo pip install https://github.com/celery/py-amqp/zipball/master
-sudo pip install https://github.com/celery/billiard/zipball/master
-sudo pip install https://github.com/celery/kombu/zipball/master
+workon tilejet
+pip install https://github.com/celery/py-amqp/zipball/master
+pip install https://github.com/celery/billiard/zipball/master
+pip install https://github.com/celery/kombu/zipball/master
 ```
 
 or if upgrading:
 
 ```
-sudo pip install https://github.com/celery/py-amqp/zipball/master --upgrade
-sudo pip install https://github.com/celery/kombu/zipball/master --upgrade
-sudo pip install https://github.com/celery/billiard/zipball/master --upgrade
+workon tilejet
+pip install https://github.com/celery/py-amqp/zipball/master --upgrade
+pip install https://github.com/celery/kombu/zipball/master --upgrade
+pip install https://github.com/celery/billiard/zipball/master --upgrade
 ```
 
-The requirements.txt file will install a fork of celery that works with unmemcache.  Then, as root, install MongoDB with the following based on http://docs.mongodb.org/manual/tutorial/install-mongodb-on-ubuntu/
+The requirements.txt file will install a fork of celery that works with unmemcache.  Then, as root (`sudo su -`), install MongoDB with the following based on http://docs.mongodb.org/manual/tutorial/install-mongodb-on-ubuntu/
 
 ```
 apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 7F0CEB10
@@ -84,7 +101,7 @@ echo 'deb http://downloads-distro.mongodb.org/repo/ubuntu-upstart dist 10gen' | 
 apt-get update
 apt-get install -y mongodb-org
 
-#Pin Current Version of MongoDB
+# Pin Current Version of MongoDB
 echo "mongodb-org hold" | sudo dpkg --set-selections
 echo "mongodb-org-server hold" | sudo dpkg --set-selections
 echo "mongodb-org-shell hold" | sudo dpkg --set-selections
@@ -92,17 +109,20 @@ echo "mongodb-org-mongos hold" | sudo dpkg --set-selections
 echo "mongodb-org-tools hold" | sudo dpkg --set-selections`
 ```
 
-Then, update SITEURL (e.g., http://hiu-maps.net/) in settings.py:
+Exit as root user.  Then, update SITEURL (e.g., http://hiu-maps.net/) in `tilejetserver/settings.py`:
 
 ```
-vim tilejet-server.git/tilejetserver/tilejetserver/settings.py
+vim tilejet-server.git/tilejetserver/settings.py
 ```
 
 Create directory for static files for NGINX and copy over static files.
 
 ```
 sudo mkdir -p /var/www/tilejet/static
-sudo python manage.py collectstatic
+chown -R ubuntu:ubuntu /var/www/tilejet
+workon tilejet
+export DJANGO_SETTINGS_MODULE="tilejetserver.settings"
+python manage.py collectstatic
 ```
 
 ## Usage

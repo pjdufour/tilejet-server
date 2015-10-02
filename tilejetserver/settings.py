@@ -41,7 +41,6 @@ ALLOWED_HOSTS = []
 # Application definition
 
 TILEJET_APPS = (
-    'tilejetserver.capabilities',
     'tilejetserver.cache',
     'tilejetserver.proxy',
     'tilejetserver.source',
