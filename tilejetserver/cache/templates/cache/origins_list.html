@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_head %}
+<style>
+</style>
+<script>
+var now = new Date();
+var today = new Date(now.getFullYear(),now.getMonth(),now.getDate());
+var formatDate = function(d)
+{
+  if(d!=undefined)
+  {
+    return d.getFullYear()+"-"+((d.getMonth()<9)?("0"+(d.getMonth()+1)):(d.getMonth()+1))+"-"+((d.getDate()<10)?("0"+d.getDate()):d.getDate());
+  }
+  else
+  {
+    return "";
+  }
+};
+</script>
+<script>
+  $(function(){
+    var tileApp = angular.module('tileAcceleratorApp', []);
+    //$("body").attr('ng-app','tileAcceleratorApp');
+    //$('#sources').attr('ng-controller', 'SourcesController');
+    //var tileApp = angular.module('tileAcceleratorApp', []);
+    
+    //$(function(){
+    tileApp.controller('OriginsControllerAll', function($scope, $http) {
+      var requests_var = $('#all').data('requests-var');
+      $http.get(url_origins)
+        .success(function(response)
+        {
+          $scope.origins = response;
+          for(var i = 0; i < $scope.origins.length; i++)
+          {
+              $scope.origins[i]['requests'] = $scope.origins[i][requests_var];
+          }
+        });
+    });
+    tileApp.controller('OriginsControllerYear', function($scope, $http) {
+      var requests_var = $('#year').data('requests-var');
+      $http.get(url_origins)
+        .success(function(response)
+        {
+          $scope.origins = response;
+          for(var i = 0; i < $scope.origins.length; i++)
+          {
+              $scope.origins[i]['requests'] = $scope.origins[i][requests_var];
+          }
+        });
+    });
+    tileApp.controller('OriginsControllerMonth', function($scope, $http) {
+      var requests_var = $('#month').data('requests-var');
+      $http.get(url_origins)
+        .success(function(response)
+        {
+          $scope.origins = response;
+          for(var i = 0; i < $scope.origins.length; i++)
+          {
+              $scope.origins[i]['requests'] = $scope.origins[i][requests_var];
+          }
+        });
+    });
+    tileApp.controller('OriginsControllerToday', function($scope, $http) {
+      var requests_var = $('#today').data('requests-var');
+      $scope.sDate = formatDate(today);
+      $http.get(url_origins)
+        .success(function(response)
+        {
+          $scope.origins = response;
+          for(var i = 0; i < $scope.origins.length; i++)
+          {
+              $scope.origins[i]['requests'] = $scope.origins[i][requests_var];
+          }
+        });
+    });
+    //});
+
+    angular.bootstrap(document, ['tileAcceleratorApp']);
+
+    //$('#sources .nav-tabs a').click(function (e) {
+    //  e.preventDefault();
+    //  $(this).tab('show');
+    //})
+  });
+</script>
+{% endblock %}
+{% block navbar_right %}
+{% endblock %}
+{% block content %}
+  <div class="row">
+    <div class="col-md-12">
+      <div class="page-header" style="padding-left:10px;"><h3>Tile Origins
+      </h3></div>
+   </div>
+  </div>
+  <div class="row">
+    <div id="origins" class="col-md-8">
+      <ul class="nav nav-tabs" data-tabs="tabs">
+        <li class="active"><a href="#today" aria-controls="today" data-toggle="tab"><i class=""></i>Today</a></li>
+        <li class=""><a href="#all" aria-controls="all" data-toggle="tab"><i class=""></i>All-Time</a></li>
+        <li class=""><a href="#year" aria-controls="year" data-toggle="tab"><i class=""></i>Year</a></li>
+        <li class=""><a href="#month" aria-controls="month" data-toggle="tab"><i class=""></i>Month</a></li>
+      </ul>
+      <div class="tab-content">
+        <div id="today" class="tab-pane active" data-requests-var="requests_today">
+          <div>
+            <div ng-controller="OriginsControllerToday">
+              {% include "cache/_origins_table.html" %}
+            </div>
+          </div>
+        </div>
+        <div id="all" class="tab-pane" data-requests-var="requests_all">
+          <div>
+            <div ng-controller="OriginsControllerAll">
+              {% include "cache/_origins_table.html" %}
+            </div>
+          </div>
+        </div>
+        <div id="year" class="tab-pane" data-requests-var="requests_year">
+          <div>
+            <div ng-controller="OriginsControllerYear">
+              {% include "cache/_origins_table.html" %}
+            </div>
+          </div>
+        </div>
+        <div id="month" class="tab-pane" data-requests-var="requests_month">
+          <div>
+            <div ng-controller="OriginsControllerMonth">
+              {% include "cache/_origins_table.html" %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">{% include "_commands.html" %}</div>
+  </div>
+<script>
+  var origin = {% if origin %}"{{ origin }}"{% else %}undefined{% endif %};
+  var date = {% if date %}"{{ date }}"{% else %}undefined{% endif %};
+  var url_origins = "{% url 'origins_json' %}";
+  //////////////////////////////////
+</script>
+{% endblock %}
+{% block footer %}
+{% endblock %}

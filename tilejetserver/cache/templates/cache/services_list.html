@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_head %}
+<style>
+</style>
+<script>
+var now = new Date();
+var today = new Date(now.getFullYear(),now.getMonth(),now.getDate());
+var formatDate = function(d)
+{
+  if(d!=undefined)
+  {
+    return d.getFullYear()+"-"+((d.getMonth()<9)?("0"+(d.getMonth()+1)):(d.getMonth()+1))+"-"+((d.getDate()<10)?("0"+d.getDate()):d.getDate());
+  }
+  else
+  {
+    return "";
+  }
+};
+</script>
+<script>
+  $(function(){
+    var tileApp = angular.module('tileAcceleratorApp', []);
+
+    tileApp.controller('ServicesControllerAll', function($scope, $http) {
+      $http.get(url_services)
+        .success(function(response)
+        {
+          $scope.services = response;
+        });
+    });
+    tileApp.controller('ServicesControllerYear', function($scope, $http) {
+      $http.get(url_services)
+        .success(function(response)
+        {
+          $scope.services = response;
+        });
+    });
+    tileApp.controller('ServicesControllerMonth', function($scope, $http) {
+      $http.get(url_services)
+        .success(function(response)
+        {
+          $scope.services = response;
+        });
+    });
+    tileApp.controller('ServicesControllerToday', function($scope, $http) {
+      $scope.sDate = formatDate(today);
+      $http.get(url_services)
+        .success(function(response)
+        {
+          $scope.services = response;
+        });
+    });
+
+    angular.bootstrap(document, ['tileAcceleratorApp']);
+  });
+</script>
+{% endblock %}
+{% block navbar_right %}
+{% endblock %}
+{% block content %}
+  <div class="row">
+    <div class="col-md-12">
+      <div class="page-header" style="padding-left:10px;"><h3>Tile Services</h3></div>
+   </div>
+  </div>
+  <div class="row">
+    <div id="services" class="col-md-8">
+      <ul class="nav nav-tabs" data-tabs="tabs">
+        <li class="active"><a href="#today" aria-controls="today" data-toggle="tab"><i class=""></i>Today</a></li>
+        <li class=""><a href="#all" aria-controls="all" data-toggle="tab"><i class=""></i>All-Time</a></li>
+        <li class=""><a href="#year" aria-controls="year" data-toggle="tab"><i class=""></i>Year</a></li>
+        <li class=""><a href="#month" aria-controls="month" data-toggle="tab"><i class=""></i>Month</a></li>
+      </ul>
+      <div class="tab-content">
+        <div id="today" class="tab-pane active" data-requests-var="requests_today">
+          <div>
+            <div ng-controller="ServicesControllerToday">
+              {% include "cache/_services_table.html" %}
+            </div>
+          </div>
+        </div>
+        <div id="all" class="tab-pane" data-requests-var="requests_all">
+          <div>
+            <div ng-controller="ServicesControllerAll">
+              {% include "cache/_services_table.html" %}
+            </div>
+          </div>
+        </div>
+        <div id="year" class="tab-pane" data-requests-var="requests_year">
+          <div>
+            <div ng-controller="ServicesControllerYear">
+              {% include "cache/_services_table.html" %}
+            </div>
+          </div>
+        </div>
+        <div id="month" class="tab-pane" data-requests-var="requests_month">
+          <div>
+            <div ng-controller="ServicesControllerMonth">
+              {% include "cache/_services_table.html" %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">{% include "_commands.html" %}</div>
+  </div>
+<script>
+  var service = {% if service %}"{{ service }}"{% else %}undefined{% endif %};
+  var date = {% if date %}"{{ date }}"{% else %}undefined{% endif %};
+  var url_services = "{% url 'services_json' %}";
+  //////////////////////////////////
+</script>
+{% endblock %}
+{% block footer %}
+{% endblock %}

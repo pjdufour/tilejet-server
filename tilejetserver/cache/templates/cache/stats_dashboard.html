@@ -1,0 +1,494 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_head %}
+<style>
+#chart_zoom g.stack._0  > rect.bar {
+    stroke: none;
+    fill: blue;
+}
+#chart_zoom g.stack._1 > rect.bar {
+    stroke: none;
+    fill: red;
+}
+#chart_zoom g.stack._2 > rect.bar {
+    stroke: none;
+    fill: green;
+}
+#chart_zoom g.dc-legend-item:nth-child(1) > rect:nth-child(1) {
+    stroke: none;
+    fill: blue;
+}
+#chart_zoom g.dc-legend-item:nth-child(2) > rect:nth-child(1) {
+    stroke: none;
+    fill: red;
+}
+#chart_zoom g.dc-legend-item:nth-child(3) > rect:nth-child(1) {
+    stroke: none;
+    fill: green;
+}
+</style>
+{% endblock %}
+{% block navbar_right %}
+  <li><a href="{% url 'stats_dashboard' %}">All</a></li>
+  <li class="dropdown">
+    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">By Origin <span class="caret"></span></a>
+    <ul class="dropdown-menu" role="menu">
+    {% for origin in origins %}
+      <li><a href="{% url 'stats_dashboard_origin' origin.name %}">{{ origin.name }}</a></li>
+    {% endfor %}
+    </ul>
+  </li>
+  <li class="dropdown">
+    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">By Source <span class="caret"></span></a>
+    <ul class="dropdown-menu" role="menu">
+    {% for source in sources %}
+      <li><a href="{% url 'stats_dashboard_source' source.name %}">{{ source.name }}</a></li>
+    {% endfor %}
+    </ul>
+  </li>
+  <li class="dropdown">
+    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">By Date <span class="caret"></span></a>
+    <ul class="dropdown-menu" role="menu">
+    {% for date in dates %}
+      <li><a href="{% url 'stats_dashboard_date' date %}">{{ date }}</a></li>
+    {% endfor %}
+    </ul>
+  </li>
+{% endblock %}
+{% block content %}
+  <div class="row">
+    <div class="col-md-12">
+      <div class="page-header" style="padding-left:10px;"><h3>Dashboard
+      {% if origin %}: {{ origin.name }}{% endif %}
+      {% if source %}: {{ source.name }}{% endif %}
+      {% if date %}: {{ date }}{% endif %}
+      </h3></div>
+   </div>
+  </div>
+  <div class="row">
+   <div class="col-md-12">
+    <ul class="nav nav-tabs">
+      <li class="active"><a href="#overview" data-toggle="tab"><i class=""></i>Overview</a></li>
+      <li><a href="#last60minutes" data-toggle="tab"><i class=""></i>Last 60 Minutes</a></li>
+      <li><a href="#last24hours" data-toggle="tab"><i class=""></i>Last 24 Hours</a></li>
+      <li><a href="#cache" data-toggle="tab"><i class="fa fa-square-o rotate-45"></i>Cache Performance</a></li>
+    </ul>
+    <div class="tab-content">
+      <div id="overview" class="tab-pane active">
+        <div class="col-md-8">
+          <div><h4>Tile Requests by Date</h4></div>
+          <div id="chart_dates"></div>
+        </div>
+        <div class="col-md-4">
+          <div style="margin-bottom:8px;"><a class="btn btn-primary" href="{% url 'stats_map' %}">Map: All</a></div>
+          {% if origin %}
+          <div style="margin-bottom:8px;"><a class="btn btn-primary" href="{% url 'stats_map_origin' origin.name %}">Map: {{ origin.name }}</a></div>
+          {% endif %}
+          {% if source %}
+          <div style="margin-bottom:8px;"><a class="btn btn-primary" href="{% url 'stats_map_source' source.name %}">Map: {{ source.name }}</a></div>
+          {% endif %}
+          {% if date %}
+          <div style="margin-bottom:8px;"><a class="btn btn-primary" href="{% url 'stats_map_date' date %}">Map for Date {{ date }}</a></div>
+          {% endif %}
+        </div>
+      </div>
+      <div id="last60minutes" class="tab-pane">
+        <div class="col-md-8">
+          <div><h4>Tile Requests by Minute For Last 60 Minutes</h4></div>
+          <div id="chart_last60minutes"></div>
+        </div>
+        <div class="col-md-4">
+        </div>
+      </div>
+      <div id="last24hours" class="tab-pane">
+        <div class="col-md-8">
+          <div><h4>Tile Requests by Hour For Last 24 Hours</h4></div>
+          <div id="chart_last24hours"></div>
+        </div>
+        <div class="col-md-4">
+        </div>
+      </div>
+      <div id="cache" class="tab-pane">
+        <div class="col-md-4">
+          <div><h4>Overall Cache Ratio</h4></div>
+          <div id="chart_status"></div>
+        </div>
+        <div class="col-md-8">
+          <div><h4>Cache Ratio by Zoom Level</h4></div>
+          <div id="chart_zoom"></div>
+        </div>
+      </div>
+  </div>
+<script>
+  var origin = {% if origin %}"{{ origin }}"{% else %}undefined{% endif %};
+  var source = {% if source %}"{{ source }}"{% else %}undefined{% endif %};
+  var date = {% if date %}"{{ date }}"{% else %}undefined{% endif %};
+  //////////////////////////////////
+  var initPieChart = function(pieChart, stats)
+  {
+    var data_by_status = []
+    if(origin!=undefined)
+    {
+      for (var k in stats.by_origin_status[origin])
+      {
+        data_by_status.push({'status':k,'count':stats.by_origin_status[origin][k]})
+      }
+    }
+    else if(source!=undefined)
+    {
+      for (var k in stats.by_source_status[source])
+      {
+        data_by_status.push({'status':k,'count':stats.by_source_status[source][k]})
+      }
+    }
+    else
+    {
+      for (var k in stats.by_status)
+      {
+        data_by_status.push({'status':k,'count':stats.by_status[k]})
+      }
+    }
+
+    var ndx = crossfilter(data_by_status);
+    var dim  = ndx.dimension(function(d) {return d.status;});
+    var group = dim.group().reduceSum(function(d) {return d.count;});
+
+    var colors = ["red","green","blue","gray"];
+
+    pieChart
+      //.margins({top: 50, right: 20, left: 50, bottom: 50})
+      .width(240)
+      .height(240)
+      .slicesCap(4)
+      .innerRadius(40)
+      .dimension(dim)
+      .group(group)
+      //.xAxisLabel("Request Status")
+      .legend(dc.legend())
+      .colors(colors)
+      .colorAccessor(function(d, i)
+      {
+        if(d.data.key=="miss")
+            return 0;
+        else if(d.data.key=="hit")
+            return 1
+        else if(d.data.key=="bypass")
+            return 2;
+        else
+            return 3;
+      });
+  }
+  var _initLineChart = function(lineChart,data,attr,xLabel,yLabel)
+  {
+    var ndx = crossfilter(data);
+    var dim  = ndx.dimension(function(d) {return d[attr];});
+    var group = dim.group().reduceSum(function(d) {return d.count;});
+
+    //var colors = ["red","green","blue","gray"];
+
+    var width = 660;
+    var height = 300;
+    var x = d3.time.scale().range([0, width]);
+    var y = d3.scale.linear().range([height, 0]);
+
+    x.domain(d3.extent(data, function(d) { return d[attr]; }));
+    y.domain(d3.extent(data, function(d) { return d.count; }));
+
+    lineChart
+      .margins({top: 50, right: 20, left: 50, bottom: 50})
+      .width(width)
+      .height(height)
+      .renderArea(true)
+      //.chart(function(c) { return dc.lineChart(c).interpolate('basis');})
+      .interpolate('basis')
+      .x(x)
+      .y(y)
+      //.brushOn(false)
+      .yAxisLabel(yLabel)
+      .xAxisLabel(xLabel)
+      //.clipPadding(10)
+      //.elasticY(true)
+      .dimension(dim)
+      .group(group)
+      .legend(dc.legend());
+  };
+  var initLineChartDates = function(lineChart, stats)
+  {
+    var parseDate = d3.time.format("%Y-%m-%d").parse;
+    var data_by_date = [];
+    if(origin!=undefined)
+    {
+      for (var k in stats.by_date_origin)
+      {
+        if(origin in stats.by_date_origin[k])
+          data_by_date.push({'date':parseDate(k), 'count':stats.by_date_origin[k][origin]*1.0});
+        else
+          data_by_date.push({'date':parseDate(k), 'count':0.0});
+      }
+    }
+    else if(source!=undefined)
+    {
+      for (var k in stats.by_date_source)
+      {
+        if(source in stats.by_date_source[k])
+          data_by_date.push({'date':parseDate(k), 'count':stats.by_date_source[k][source]*1.0});
+        else
+          data_by_date.push({'date':parseDate(k), 'count':0.0});
+      }
+    }
+    else
+    {
+      for (var k in stats.by_date)
+      {
+        data_by_date.push({'date':parseDate(k), 'count':stats.by_date[k]*1.0})
+      }
+    }
+
+    _initLineChart(lineChart,data_by_date,"date","Date","Tile Request");
+
+  };
+  var initLineChartLast60Minutes = function(lineChart, stats)
+  {
+    var parseMinute = d3.time.format("%Y-%m-%d %H:%M").parse;
+    var data_by_minute = [];
+    if(origin!=undefined)
+    {
+      for (var k in stats.by_minute_origin)
+      {
+        if(origin in stats.by_minute_origin[k])
+          data_by_minute.push({'minute':parseMinute(k), 'count':stats.by_minute_origin[k][origin]*1.0});
+        else
+          data_by_minute.push({'minute':parseMinute(k), 'count':0.0});
+      }
+    }
+    else if(source!=undefined)
+    {
+      for (var k in stats.by_minute_source)
+      {
+        if(source in stats.by_minute_source[k])
+          data_by_minute.push({'minute':parseMinute(k), 'count':stats.by_minute_source[k][source]*1.0});
+        else
+          data_by_minute.push({'minute':parseMinute(k), 'count':0.0});
+      }
+    }
+    else
+    {
+      for (var k in stats.by_minute)
+      {
+        data_by_minute.push({'minute':parseMinute(k), 'count':stats.by_minute[k]*1.0})
+      }
+    }
+
+    _initLineChart(lineChart,data_by_minute, "minute", "Minute", "Tile Request");
+
+  };
+
+  var initLineChartLast24Hours = function(lineChart, stats)
+  {
+    var parseHour = d3.time.format("%Y-%m-%d %H").parse;
+    var data_by_hour = [];
+    if(origin!=undefined)
+    {
+      for (var k in stats.by_hour_origin)
+      {
+        if(origin in stats.by_hour_origin[k])
+          data_by_hour.push({'hour':parseHour(k), 'count':stats.by_hour_origin[k][origin]*1.0});
+        else
+          data_by_hour.push({'hour':parseHour(k), 'count':0.0});
+      }
+    }
+    else if(source!=undefined)
+    {
+      for (var k in stats.by_hour_source)
+      {
+        if(source in stats.by_hour_source[k])
+          data_by_hour.push({'hour':parseHour(k), 'count':stats.by_hour_source[k][source]*1.0});
+        else
+          data_by_hour.push({'hour':parseHour(k), 'count':0.0});
+      }
+    }
+    else
+    {
+      for (var k in stats.by_hour)
+      {
+        data_by_hour.push({'hour':parseHour(k), 'count':stats.by_hour[k]*1.0})
+      }
+    }
+
+    _initLineChart(lineChart,data_by_hour,"hour","Hour","Tile Request");
+
+  };
+
+
+  var initColumnChart = function(columnChart, stats)
+  {
+    var data_by_zoom = [];
+    if(origin!=undefined)
+    {
+      for (var z in stats.by_origin_zoom_status[origin])
+      {
+        var obj = stats.by_origin_zoom_status[origin][z];
+        var out = {'zoom': parseInt(z,10)};
+        var statuses = ["miss","hit","bypass"];
+        for(var i = 0; i < statuses.length; i++)
+        {
+          var status = statuses[i];
+          if(status in obj)
+          {
+            out[status] = obj[status];
+          }
+          else
+          {
+            out[status] = 0;
+          }
+        }
+        data_by_zoom.push(out);
+      }
+    }
+    else if(source!=undefined)
+    {
+      for (var z in stats.by_source_zoom_status[source])
+      {
+        var obj = stats.by_source_zoom_status[source][z];
+        var out = {'zoom': parseInt(z,10)};
+        var statuses = ["miss","hit","bypass"];
+        for(var i = 0; i < statuses.length; i++)
+        {
+          var status = statuses[i];
+          if(status in obj)
+          {
+            out[status] = obj[status];
+          }
+          else
+          {
+            out[status] = 0;
+          }
+        }
+        data_by_zoom.push(out);
+      }
+    }
+    else
+    {
+      for (var z in stats.by_zoom_status)
+      {
+        var obj = stats.by_zoom_status[z];
+        var out = {'zoom': parseInt(z,10)};
+        var statuses = ["miss","hit","bypass"];
+        for(var i = 0; i < statuses.length; i++)
+        {
+          var status = statuses[i];
+          if(status in obj)
+          {
+            out[status] = obj[status];
+          }
+          else
+          {
+            out[status] = 0;
+          }
+        }
+        data_by_zoom.push(out);
+      }
+    }
+
+
+    var ndx = crossfilter(data_by_zoom);
+    var dim  = ndx.dimension(function(d) {return d.zoom;});
+    //var group = dim.group().reduceSum(function(d) {return d});
+    var group = dim.group().reduce(
+            function (p, v) {
+                p.miss += v.miss;
+                p.hit += v.hit;
+                p.bypass += v.bypass;
+                return p;
+            },
+            function (p, v) {
+                p.miss -= v.miss;
+                p.hit -= v.hit;
+                p.bypass -= v.bypass;
+                return p;
+            },
+            function () {
+                return {
+                    miss: 0,
+                    hit: 0,
+                    bypass: 0
+                };
+            }
+    );
+
+
+    //var colors = ["red","green","blue","gray"];
+
+    var width = 660;
+    var height = 240;
+    var x = d3.scale.linear().range([0, width]);
+    x.domain([0,22.5]);
+
+    //var y = d3.scale.linear().range([height, 0]);
+
+    //x.domain(d3.extent(data_by_date, function(d) { return d.date; }));
+    //y.domain(d3.extent(data_by_date, function(d) { return d.count; }));
+
+    var colorRenderlet = function (_chart) {
+        _chart.selectAll("rect.bar")
+                .on("click", function (d) {
+                    function setAttr(selection, keyName) {
+                        selection.style("fill", function (d) {
+                            if (d[keyName] == "miss") return "red";
+                            else if (d[keyName] == "bypass") return "blue";
+                            else if (d[keyName] == "hit") return "green";
+                        });
+                    };
+                    setAttr(_chart.selectAll("g.stack").selectAll("rect.bar"), "layer")
+                    setAttr(_chart.selectAll("g.dc-legend-item").selectAll("rect"), "name")
+                });
+    };
+
+    columnChart
+      .margins({top: 50, right: 20, left: 50, bottom: 50})
+      .width(width)
+      .height(height)
+      .gap(4)
+      .x(x)
+      .centerBar(true)
+      .elasticY(true)
+      .dimension(dim)
+      .group(group, "bypass")
+      .valueAccessor(function(d){
+        return d.value.bypass;
+      })
+      .stack(group, "miss", function(d){
+        return d.value.miss;
+      })
+      .stack(group, "hit", function(d){
+        return d.value.hit;
+      })
+      .renderlet(colorRenderlet)
+      .legend(dc.legend());
+  }
+
+  var pieChart = dc.pieChart("#chart_status");
+  var lineChartDates = dc.lineChart("#chart_dates");
+  var lineChartLast60Minutes = dc.lineChart("#chart_last60minutes");
+  var lineChartLast24Hours = dc.lineChart("#chart_last24hours");
+  var columnChart = dc.barChart("#chart_zoom");
+  d3.json("{% url 'stats_json' %}", function(error, stats)
+  {
+    initPieChart(pieChart, stats)
+    initLineChartDates(lineChartDates, stats)
+    initLineChartLast60Minutes(lineChartLast60Minutes, stats)
+    initLineChartLast24Hours(lineChartLast24Hours, stats)
+    initColumnChart(columnChart, stats)
+    
+
+    pieChart.render();
+    lineChartDates.render();
+    lineChartLast60Minutes.render();
+    lineChartLast24Hours.render();
+    columnChart.render();
+  });
+</script>
+{% endblock %}
+{% block footer %}
+{% endblock %}
