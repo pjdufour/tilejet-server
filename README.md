@@ -125,6 +125,8 @@ export DJANGO_SETTINGS_MODULE="tilejetserver.settings"
 python manage.py collectstatic
 ```
 
+Also change the root for NGINX to point to `/var/www`.
+
 ## Usage
 
 The application can be run through the Django built-in development server or Gnuicron ([http://gunicorn.org/](http://gunicorn.org/)).
@@ -179,9 +181,9 @@ python manage.py runserver [::]:8000
 To run the application using Gnuicorn, execute the following:
 
 ```
-gunicorn --workers=4 --worker-class gevent -b 0.0.0.0:8000 tilejet.wsgi
+gunicorn --workers=4 --worker-class gevent -b 0.0.0.0:8000 tilejetserver.wsgi
 or
-gunicorn --workers=4 --worker-class gevent -b unix:///tmp/gunicorn.sock --error-logfile error.log tiljet.wsgi
+gunicorn --workers=4 --worker-class gevent -b unix:///tmp/gunicorn.sock --error-logfile error.log tiljetserver.wsgi
 ```
 
 You can learn more about gunicron configuration at [http://docs.gunicorn.org/en/develop/configure.html](http://docs.gunicorn.org/en/develop/configure.html).
