@@ -27,9 +27,9 @@ import json
 
 from .models import TileOrigin, TileSource
 
-from ittc.cache.models import TileService
+from tilejetserver.cache.models import TileService
 
-from ittc.utils import getValue, TYPE_TMS, TYPE_TMS_FLIPPED, TYPE_BING, TYPE_WMS
+from tilejetserver.utils import getValue, TYPE_TMS, TYPE_TMS_FLIPPED, TYPE_BING, TYPE_WMS
 
 
 def reloadTileServices():

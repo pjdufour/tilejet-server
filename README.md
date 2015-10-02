@@ -119,7 +119,7 @@ Create directory for static files for NGINX and copy over static files.
 
 ```
 sudo mkdir -p /var/www/tilejet/static
-chown -R ubuntu:ubuntu /var/www/tilejet
+sudo chown -R ubuntu:ubuntu /var/www/tilejet
 workon tilejet
 export DJANGO_SETTINGS_MODULE="tilejetserver.settings"
 python manage.py collectstatic
@@ -157,7 +157,7 @@ sudo service mongod start
 Then, prepare the server.
 
 ```
-cd tilejet-server.git/tilejetserver
+cd tilejet-server.git
 python manage.py syncdb
 ```
 
@@ -166,8 +166,8 @@ If `syncdb` asks if you would like to create an admin user, do it.
 Then start a Celery worker with:
 
 ```
-cd tilejet-server.git/tilejetserver
-celery -A tilejet worker -P gevent --loglevel=error --concurrency=40 -n worker1.%h
+cd tilejet-server.git
+celery -A tilejetserver worker -P gevent --loglevel=error --concurrency=40 -n worker1.%h
 ```
 
 To run the application using the Django built-in development server, execute the following:
