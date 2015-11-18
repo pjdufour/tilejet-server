@@ -44,6 +44,7 @@ apt-get update
 apt-get install -y curl vim git nginx
 apt-get install -y memcached zlib1g-dev libjpeg-dev rabbitmq-server
 apt-get install -y python-dev python-pip
+apt-get install -y zookeeperd
 apt-get install -y supervisor
 # Install Python Virtual Environment libraries
 pip install virtualenvwrapper paver
@@ -55,6 +56,8 @@ Then, as ubuntu, clone this repo with commands like the following.
 cd ~
 git clone https://github.com/tilejet/tilejet-server.git tilejet-server.git
 ```
+
+### Virtual Environment
 
 Make virtual environment `tilejet`.
 
@@ -93,7 +96,11 @@ pip install https://github.com/celery/kombu/zipball/master --upgrade
 pip install https://github.com/celery/billiard/zipball/master --upgrade
 ```
 
-The requirements.txt file will install a fork of celery that works with unmemcache.  Then, as root (`sudo su -`), install MongoDB with the following based on http://docs.mongodb.org/manual/tutorial/install-mongodb-on-ubuntu/
+The requirements.txt file will install a fork of celery that works with unmemcache.
+
+### MongoDB
+
+Then, as root (`sudo su -`), install MongoDB with the following based on http://docs.mongodb.org/manual/tutorial/install-mongodb-on-ubuntu/
 
 ```
 apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 7F0CEB10
@@ -115,6 +122,8 @@ Exit as root user.  Then, update SITEURL (e.g., http://hiu-maps.net/) in `tileje
 vim tilejet-server.git/tilejetserver/settings.py
 ```
 
+### NGINX
+
 Create directory for static files for NGINX and copy over static files.
 
 ```
@@ -126,6 +135,18 @@ python manage.py collectstatic
 ```
 
 Also change the root for NGINX to point to `/var/www`.
+
+### Kafka
+
+As root(`sudo su -`):
+
+```
+cd /opt
+wget 'http://apache.cs.utah.edu/kafka/0.8.2.0/kafka_2.10-0.8.2.0.tgz' -O 'kafka_2.10-0.8.2.0.tgz'
+tar -xzvf kafka_2.10-0.8.2.0.tgz
+echo 'PATH="$PATH:/opt/kafka_2.10-0.8.2.0/bin"' >> /etc/profile.d/kafka.sh
+source /etc/profile.d/kafka.sh
+```
 
 ## Usage
 
@@ -226,8 +247,37 @@ TILEJET = {
 TBD
 
 ## License
-This project constitutes a work of the United States Government and is not subject to domestic copyright protection under 17 USC § 105.
 
-However, because the project utilizes code licensed from contributors and other third parties, it therefore is licensed under the MIT License. http://opensource.org/licenses/mit-license.php. Under that license, permission is granted free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the conditions that any appropriate copyright notices and this permission notice are included in all copies or substantial portions of the Software.
+### Latest Code
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+Copyright (c) 2015, Patrick Dufour
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+
+* Neither the name of tilejet-server nor the names of its
+  contributors may be used to endorse or promote products derived from
+  this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+### Previous Code
+
+All commits on and before October 2, 2015 are considered government work and are entirely in the public domain.  That code is preserved under the USG branch at [https://github.com/tilejet/tilejet-server/commits/usg](https://github.com/tilejet/tilejet-server/commits/usg).

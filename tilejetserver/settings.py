@@ -109,9 +109,9 @@ USE_TZ = True
 #STATIC_ROOT = os.path.join(BASE_DIR, "static_root")
 STATIC_ROOT = '/var/www/tilejet/static/'
 STATIC_URL = '/tilejet/static/'
-#STATICFILES_DIRS = [
-#    os.path.join(BASE_DIR, "static"),
-#]
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, "tilejetserver/static"),
+]
 #STATICFILES_FINDERS = (
 #    'django.contrib.staticfiles.finders.FileSystemFinder',
 #    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
@@ -292,4 +292,11 @@ TILEJET_DBPORT = 27017
 TILEJET_DBNAME = 'tilejet'
 TILEJET_LOGS_REQUEST_ROOT = LOG_REQUEST_ROOT
 
-TILEJET_GEVENT_MONKEY_PATCH=True
+TILEJET_GEVENT_MONKEY_PATCH = True
+
+TILEJET_GEOWATCH_ENABLED = True
+TILEJET_GEOWATCH_HOST = "localhost:9092"
+TILEJET_GEOWATCH_TOPIC = "requests"
+TILEJET_GEOWATCH_COUNT = 320
+TILEJET_GEOWATCH_SLEEP = 1
+TILEJET_GEOWATCH_TTL = 60

@@ -16,6 +16,8 @@ import StringIO
 from PIL import Image, ImageEnhance
 import umemcache
 
+from geowatchutil.producer import send_tile_request, send_tile_requests
+
 from tilejetutil.base import webmercator_bbox
 from tilejetutil.tilemath import flip_y, tms_to_bbox, quadkey_to_tms, tms_to_quadkey, tms_to_geojson
 from tilejetutil.nav import getNearbyTiles, getChildrenTiles, getParentTiles
@@ -393,29 +395,30 @@ def info(request):
     #    'stats_tilerequests',
     #    GEVENT_MONKEY_PATCH=settings.TILEJET_GEVENT_MONKEY_PATCH)
 
-    stats_c = stats_cache()
     caches = []
     c = settings.TILEJET['cache']['memory']
 
-    size = int(stats_c['bytes'])
-    maxsize = int(stats_c['limit_maxbytes'])
-    size_percentage = format(((100.0 * size) / maxsize),'.4f')+"%" 
-    items = int(stats_c['curr_items'])
+    stats_c = stats_cache()
+    if stats_c:
+        size = int(stats_c['bytes'])
+        maxsize = int(stats_c['limit_maxbytes'])
+        size_percentage = format(((100.0 * size) / maxsize),'.4f')+"%" 
+        items = int(stats_c['curr_items'])
 
-    caches.append({
-        'name': 'memory',
-        'enabled': c['enabled'],
-        'description': c['description'],
-        'type': c['type'],
-        'size': formatMemorySize(size, original='B'),
-        'maxsize': formatMemorySize(maxsize, original='B'),
-        'size_percentage': size_percentage,
-        'items': items,
-        'minzoom': c['minZoom'],
-        'maxzoom': c['maxZoom'],
-        'expiration': c['expiration'],
-        'link_memcached': '/cache/stats/export/cache.json'
-    })
+        caches.append({
+            'name': 'memory',
+            'enabled': c['enabled'],
+            'description': c['description'],
+            'type': c['type'],
+            'size': formatMemorySize(size, original='B'),
+            'maxsize': formatMemorySize(maxsize, original='B'),
+            'size_percentage': size_percentage,
+            'items': items,
+            'minzoom': c['minZoom'],
+            'maxzoom': c['maxZoom'],
+            'expiration': c['expiration'],
+            'link_memcached': '/cache/stats/export/cache.json'
+        })
 
     heuristics = []
     h = settings.TILEJET['heuristic']['down']
@@ -466,12 +469,26 @@ def info(request):
     except:
         print "Could not build scheduled tasks.  Is celery beat running?"
 
+    topics = []
+    try:
+        from kafka import KafkaClient
+        kafka = KafkaClient(settings.TILEJET_GEOWATCH_HOST)
+        for topic in kafka.topics:
+            topic2 = {
+                'name': topic,
+                'partitions': len(kafka.topic_partitions.get(topic, []))
+            }
+            topics.append(topic2)
+    except:
+        print "Could not generate topics.  Is Kafka offline?"
+
     context_dict = {
         'origins': getTileOrigins(),
         'sources': getTileSources(),
         'caches': caches,
         'heuristics': heuristics,
         'queues': queues,
+        'topics': topics,
         'scheduled': scheduled,
         'stats': settings.TILEJET_LIST_STATS,
         'hosts': settings.PROXY_ALLOWED_HOSTS
@@ -913,17 +930,34 @@ def tile_tms(request, slug=None, z=None, x=None, y=None, u=None, ext=None):
 
 def requestIndirectTiles(tilesource, ext, tiles, now):
     if tiles:
-        for t in tiles:
-            tx, ty, tz = t
-            #taskRequestTile.delay(tilesource.id, tz, tx, ty, ext)
-            args = [tilesource['id'], tz, tx, ty, ext]
-            #Expires handled by global queue setting
-            try:
-                taskRequestTile.apply_async(args=args, kwargs=None, queue="requests")
-            except:
-                print "Error: Could not connect to indirect request queue."
-                line = "Error: Could not connect to indirect request queue."
-                logTileRequestError(line, now)
+        if settings.TILEJET_GEOWATCH_ENABLED:
+            #try:
+            if True:
+                if settings.TILEJET_GEOWATCH_ENABLED:
+                   send_tile_requests(
+                       settings.TILEJET_GEOWATCH_TOPIC,
+                       str(tilesource['id']),
+                       tiles,
+                       extension=ext,
+                       host = settings.TILEJET_GEOWATCH_HOST,
+                       now = now
+                    )
+            #except:
+            #    print "Error: Could not connect to indirect request queue."
+            #    line = "Error: Could not connect to indirect request queue."
+            #    logTileRequestError(line, now)
+        else:
+            for t in tiles:
+                tx, ty, tz = t
+                #taskRequestTile.delay(tilesource.id, tz, tx, ty, ext)
+                args = [tilesource['id'], tz, tx, ty, ext]
+                #Expires handled by global queue setting
+                try:
+                    taskRequestTile.apply_async(args=args, kwargs=None, queue="requests")
+                except:
+                    print "Error: Could not connect to indirect request queue."
+                    line = "Error: Could not connect to indirect request queue."
+                    logTileRequestError(line, now)
 
 
 def _requestTile(request, tileservice=None, tilesource=None, tileorigin=None, z=None, x=None, y=None, u=None, ext=None):

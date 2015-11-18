@@ -1,6 +1,10 @@
 mkdir logs
-mkdir logs/supervisord
-mkdir logs/memcached
 mkdir logs/celery
-mkdir logs/requests 
+mkdir logs/errors 
 mkdir logs/gunicorn 
+mkdir logs/kafka
+mkdir logs/geowatch
+mkdir logs/memcached
+mkdir logs/requests 
+mkdir logs/supervisord
+mkdir logs/zookeeper

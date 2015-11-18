@@ -1,3 +1,4 @@
+python-dateutil
 httplib2
 django
 django-cors-headers
@@ -14,7 +15,9 @@ iso8601
 django-jquery
 pinax-theme-bootstrap
 django_forms_bootstrap
-git+git://github.com/tilejet/tilejet-util@master
-git+git://github.com/tilejet/tilejet-logs@master
-git+git://github.com/tilejet/tilejet-stats@master
-git+git://github.com/tilejet/tilejet-cache@master
+tilejet-util
+tilejet-logs
+tilejet-stats
+tilejet-cache
+kafka-python
+git+git://github.com/geowatch/geowatch-util@master

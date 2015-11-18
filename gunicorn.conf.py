@@ -1,7 +1,12 @@
 import os
 
-bind = 'unix:///tmp/gunicorn.sock'
-workers = 5
+# Development
+bind = '0.0.0.0:8080'
+workers = 4
+# Production
+#bind = 'unix:///tmp/gunicorn.sock'
+#workers = 5
+#
 worker_class = 'gevent'
 #worker_class = 'egg:gunicorn#gevent'
 # Logging

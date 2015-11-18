@@ -22,9 +22,8 @@ import os
 import datetime
 
 @shared_task
-def taskRequestTile(ts, iz, ix, iy, ext):
+def taskRequestTile(ts, iz, ix, iy, ext, verbose=True):
 
-    verbose = True
     now = datetime.datetime.now()
     # Load Logging Info
     #log_root = settings.LOG_REQUEST_ROOT
