@@ -234,7 +234,7 @@ CELERYBEAT_SCHEDULE = {
 LOG_REQUEST_ROOT = BASE_DIR+'/logs/requests'
 LOG_INDIRECT_ROOT = BASE_DIR+'/logs/indirect'
 LOG_ERRORS_ROOT = BASE_DIR+'/logs/errors'
-LOG_REQUEST_FORMAT = '{status}	{tileorigin}	{tilesource}	{z}	{x}	{y}	{ip}	{datetime}'
+LOG_REQUEST_FORMAT = '{status}	{tileorigin}	{tilesource}	{z}	{x}	{y}	{ext}	{ip}	{datetime}'
 LOG_REQUEST_COLLECTION = 'logs'
 MONGO_AGG_FLAG = False
 ASYNC_STATS = True
@@ -294,9 +294,33 @@ TILEJET_LOGS_REQUEST_ROOT = LOG_REQUEST_ROOT
 
 TILEJET_GEVENT_MONKEY_PATCH = True
 
+############################
+# MongoDB
+# Unix Socket Preferred
+TILEJET_MONGODB_HOST = "'/tmp/mongodb-27017.sock'"
+TILEJET_MONGODB_PORT = None
+# For TCP Connections
+# TILEJET_MONGODB_HOST = "localhost"
+# TILEJET_MONGODB_PORT = "27017"
+TILEJET_MONGODB_NAME = 'tilejet'
+############################
+# GeoWatch
+
 TILEJET_GEOWATCH_ENABLED = True
 TILEJET_GEOWATCH_HOST = "localhost:9092"
-TILEJET_GEOWATCH_TOPIC = "requests"
-TILEJET_GEOWATCH_COUNT = 320
-TILEJET_GEOWATCH_SLEEP = 1
 TILEJET_GEOWATCH_TTL = 60
+
+# GeoWatch Requests Daemon
+TILEJET_GEOWATCH_TOPIC_REQUESTS = "requests"
+TILEJET_GEOWATCH_COUNT_REQUESTS = 1000
+TILEJET_GEOWATCH_SLEEP_REQUESTS = 1
+
+# GeoWatch Logs Daemon
+TILEJET_GEOWATCH_TOPIC_LOGS = "logs"
+TILEJET_GEOWATCH_COUNT_LOGS = 1000
+TILEJET_GEOWATCH_SLEEP_LOGS = 1
+
+# GeoWatch Statistics Daemon
+TILEJET_GEOWATCH_TOPIC_STATS = "statistics"
+TILEJET_GEOWATCH_COUNT_STATS = 10
+TILEJET_GEOWATCH_SLEEP_STATS = 1

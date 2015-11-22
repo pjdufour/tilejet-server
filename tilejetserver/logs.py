@@ -1,4 +1,5 @@
 import os
+import glob
 import sys
 import httplib2
 import base64
@@ -6,6 +7,8 @@ import math
 import copy
 import string
 import datetime
+import iso8601
+import time
 
 import email.utils as eut
 
@@ -19,24 +22,32 @@ from django.http import Http404
 
 from geojson import Polygon, Feature, FeatureCollection, GeometryCollection
 
+from geowatch.producer import connect_and_send
+
 from tilejetstats.mongodb import buildStats, incStats
-
-import iso8601
-
-import time
-
-import glob
-
-
 from tilejetlogs.tilelogs import buildTileRequestDocument
-
-
 from tilejetserver.cache.tasks import taskIncStats
 
 http_client = httplib2.Http()
 
 
 def logTileRequest(tileorigin, tilesource, x, y, z, status, datetime, ip):
+    log_root = settings.LOG_REQUEST_ROOT
+    log_format = settings.LOG_REQUEST_FORMAT
+    if log_root and log_format:
+        log_file = log_root+os.sep+"requests_tiles_"+datetime.strftime('%Y-%m-%d')+".tsv"
+
+        with open(log_file,'a') as f:
+            line = log_format.format(status=status,tileorigin=tileorigin,tilesource=tilesource,z=z,x=x,y=y,ip=ip,datetime=datetime.isoformat())
+            f.write(line+"\n")
+
+            connect_and_send(
+                settings.TILEJET_GEOWATCH_HOST,
+                settings.TILEJET_GEOWATCH_TOPIC_LOGS,
+                line)
+
+
+def logTileRequest_old(tileorigin, tilesource, x, y, z, status, datetime, ip):
     #starttime = time.clock()
     #==#
     log_root = settings.LOG_REQUEST_ROOT
@@ -62,10 +73,18 @@ def logTileRequest(tileorigin, tilesource, x, y, z, status, datetime, ip):
             db = None
             r = None
             try:
-                #client = MongoClient('localhost', 27017)
                 client = MongoClient('/tmp/mongodb-27017.sock')
                 db = client[settings.TILEJET_DBNAME]
-                r = buildTileRequestDocument(tileorigin, tilesource, x, y, z, status, datetime, ip)
+                r = buildTileRequestDocument(
+                    tileorigin=tileorigin,
+                    tilesource=tilesource,
+                    x=x,
+                    y=y,
+                    z=z,
+                    extension=extension,
+                    status=status,
+                    datetime=datetime,
+                    ip=ip)
             except:
                 client = None
                 db = None
