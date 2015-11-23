@@ -18,6 +18,7 @@ count = settings.TILEJET_GEOWATCH_COUNT_REQUESTS
 print "GeoWatch Settings"
 print "Host: "+host
 print "Topic: "+topic
+print "Count: "+count
 
 client, consumer = acquire_consumer(host=host, topic=topic, max_tries=12, sleep_period=5)
 
@@ -40,7 +41,6 @@ else:
             print "Processing "+str(len(requests))+" indirect tile requests"
             for r in requests:
                 if r in seen:
-                    print "request already in last cycle.  Just bypassing for now."
                     continue
                 seen.add(r)
                 r2 = decode_tile_request(r)

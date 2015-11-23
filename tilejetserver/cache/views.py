@@ -935,7 +935,7 @@ def requestIndirectTiles(tilesource, ext, tiles, now):
             if True:
                 if settings.TILEJET_GEOWATCH_ENABLED:
                    send_tile_requests(
-                       settings.TILEJET_GEOWATCH_TOPIC,
+                       settings.TILEJET_GEOWATCH_TOPIC_REQUESTS,
                        str(tilesource['id']),
                        tiles,
                        extension=ext,
@@ -1081,11 +1081,11 @@ def _requestTile(request, tileservice=None, tilesource=None, tileorigin=None, z=
         if tile:
             if verbose:
                 print "cache hit for "+key
-            logTileRequest(tileorigin, tilesource['name'], x, y, z, 'hit', now, ip)
+            logTileRequest(tileorigin, tilesource['name'], x, y, z, ext, 'hit', now, ip)
         else:
             if tilecache and verbose:
                 print "cache miss for "+key
-            logTileRequest(tileorigin, tilesource['name'], x, y, z, 'miss', now, ip)
+            logTileRequest(tileorigin, tilesource['name'], x, y, z, ext, 'miss', now, ip)
 
             if tilesource['type'] == TYPE_TMS:
                 tile = requestTileFromSource(tilesource=tilesource,x=ix,y=iy,z=iz,ext=ext,verbose=True)
@@ -1116,7 +1116,7 @@ def _requestTile(request, tileservice=None, tilesource=None, tileorigin=None, z=
     else:
         if verbose:
             print "cache bypass for "+tilesource['name']+"/"+str(iz)+"/"+str(ix)+"/"+str(iy)
-        logTileRequest(tileorigin, tilesource['name'], x, y, z, 'bypass', now, ip)
+        logTileRequest(tileorigin, tilesource['name'], x, y, z, ext, 'bypass', now, ip)
 
         if tilesource['type'] == TYPE_TMS:
             tile = requestTileFromSource(tilesource=tilesource,x=ix,y=iy,z=iz,ext=ext,verbose=True)

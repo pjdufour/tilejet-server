@@ -3,7 +3,8 @@ import time
 from django.conf import settings
 
 from geowatchutil.client import create_client
-from geowatchutil.consumer import create_consumer, receive_tile_requests, decode_tile_request
+from geowatchutil.consumer import receive_tile_requests, decode_tile_request, receive_messages
+from geowatchutil.producer import create_producer
 from geowatchutil.runtime import acquire_consumer
 
 from tilejetstats.mongodb import buildStats, incStats
@@ -47,6 +48,7 @@ list_stats = settings.TILEJET_LIST_STATS
 print "GeoWatch Settings"
 print "Host: "+host
 print "Topic: "+topic
+print "Count: "+count
 
 gw_client, consumer = acquire_consumer(host=host, topic=topic, max_tries=12, sleep_period=5)
 if not consumer:
@@ -67,13 +69,19 @@ else:
         cycle = 0
         while True:
             print "Cycle: "+str(cycle)
-            requests = receive_messages(
-                topic,
-                count = count,
-                timeout = 4,
-                ttl = settings.TILEJET_GEOWATCH_TTL,
-                consumer = consumer
-            )
+            try:
+                requests = receive_messages(
+                    topic,
+                    count = count,
+                    timeout = 4,
+                    ttl = settings.TILEJET_GEOWATCH_TTL,
+                    consumer = consumer
+                )
+            except IOError, e:
+                print "Could not receive messages, b/c IO Error.  Skipping to next cycle"
+                print e
+                continue
+
             if requests:
                 print "Processing "+str(len(requests))+" tile request logs"
                 for r in requests:

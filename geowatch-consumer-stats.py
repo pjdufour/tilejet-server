@@ -46,6 +46,7 @@ list_stats = settings.TILEJET_LIST_STATS
 print "GeoWatch Settings"
 print "Host: "+host
 print "Topic: "+topic
+print "Count: "+count
 
 gw_client, consumer = acquire_consumer(host=host, topic=topic, max_tries=12, sleep_period=5)
 if not consumer:

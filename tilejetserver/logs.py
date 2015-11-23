@@ -22,7 +22,7 @@ from django.http import Http404
 
 from geojson import Polygon, Feature, FeatureCollection, GeometryCollection
 
-from geowatch.producer import connect_and_send
+from geowatchutil.producer import connect_and_send
 
 from tilejetstats.mongodb import buildStats, incStats
 from tilejetlogs.tilelogs import buildTileRequestDocument
@@ -31,14 +31,14 @@ from tilejetserver.cache.tasks import taskIncStats
 http_client = httplib2.Http()
 
 
-def logTileRequest(tileorigin, tilesource, x, y, z, status, datetime, ip):
+def logTileRequest(tileorigin, tilesource, x, y, z, ext, status, datetime, ip):
     log_root = settings.LOG_REQUEST_ROOT
     log_format = settings.LOG_REQUEST_FORMAT
     if log_root and log_format:
         log_file = log_root+os.sep+"requests_tiles_"+datetime.strftime('%Y-%m-%d')+".tsv"
 
         with open(log_file,'a') as f:
-            line = log_format.format(status=status,tileorigin=tileorigin,tilesource=tilesource,z=z,x=x,y=y,ip=ip,datetime=datetime.isoformat())
+            line = log_format.format(status=status,tileorigin=tileorigin,tilesource=tilesource,z=z,x=x,y=y,ext=ext,ip=ip,datetime=datetime.isoformat())
             f.write(line+"\n")
 
             connect_and_send(
