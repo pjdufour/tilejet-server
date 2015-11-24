@@ -93,21 +93,28 @@ else:
 
             if requests:
                 print "Processing "+str(len(requests))+" tile request logs"
+                r3_list = []
                 for r in requests:
                     r2 = decode_tile_request_log(r)
                     if verbose:
                         print "Logging"+str(r2)
                     r3 = buildTileRequestDocument(** r2)
-                    if r3:
-                        store_success = True
-                        print r3
-                        #try:
-                        m_db[mongo_collection].insert(r3, w=0)
-                        #except:
-                        #    print "Error saving Log to MongoDB"
-                        #    store_success = False
-                        if store_success:
-                            send_json(topic_stats, buildStats(list_stats, r3), producer=producer)
+                    r3_list.append(r3)
+
+                m_db[mongo_collection].insert(r3_list, w=0)
+                for r3 in r3_list:
+                    send_json(topic_stats, buildStats(list_stats, r3), producer=producer)
+
+                    #if r3:
+                    #    store_success = True
+                    #    print r3
+                    #    #try:
+                    #    m_db[mongo_collection].insert(r3, w=0)
+                    #    #except:
+                    #    #    print "Error saving Log to MongoDB"
+                    #    #    store_success = False
+                    #    if store_success:
+                    #        send_json(topic_stats, buildStats(list_stats, r3), producer=producer)
 
             else:
                 if verbose:
