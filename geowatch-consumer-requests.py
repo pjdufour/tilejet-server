@@ -3,8 +3,8 @@ import time
 from django.conf import settings
 
 from geowatchutil.client import create_client
-from geowatchutil.decoder import decode_tile_request
 from geowatchutil.consumer import create_consumer, receive_tile_requests
+from geowatchutil.decoder import decode_tile_request
 from geowatchutil.runtime import acquire_consumer
 
 from tilejetserver.cache.tasks import taskRequestTile
@@ -18,7 +18,7 @@ count = settings.TILEJET_GEOWATCH_COUNT_REQUESTS
 print "GeoWatch Settings"
 print "Host: "+host
 print "Topic: "+topic
-print "Count: "+count
+print "Count: "+str(count)
 
 client, consumer = acquire_consumer(host=host, topic=topic, max_tries=12, sleep_period=5)
 

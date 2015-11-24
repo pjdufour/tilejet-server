@@ -1,9 +1,10 @@
+import json
 import time
 
 from django.conf import settings
 
 from geowatchutil.client import create_client
-from geowatchutil.consumer import create_consumer, receive_tile_requests, decode_tile_request
+from geowatchutil.consumer import create_consumer, receive_tile_requests, decode_tile_request, receive_messages
 from geowatchutil.runtime import acquire_consumer
 
 from tilejetstats.mongodb import buildStats, incStats
@@ -46,19 +47,23 @@ list_stats = settings.TILEJET_LIST_STATS
 print "GeoWatch Settings"
 print "Host: "+host
 print "Topic: "+topic
-print "Count: "+count
+print "Count: "+str(count)
 
 gw_client, consumer = acquire_consumer(host=host, topic=topic, max_tries=12, sleep_period=5)
 if not consumer:
     print "Could not get lock on GeoWatch server after "+str(tries)+" tries."
 else:
     print "Consumer locked.  Starting consuming message"
+    # ! Cannot Gevent Monkey Patch, since it's not comaptible with python-kafka
+    # ! also the benefits might that be great for a consumer, since it isn't part of 
+    # ! request/response cycle
+    # !
     # Import Gevent and monkey patch
-    try:
-        from gevent import monkey
-        monkey.patch_all()
-    except:
-        print "gevent monkey patch failed"
+    #try:
+    #    from gevent import monkey
+    #    monkey.patch_all()
+    #except:
+    #    print "gevent monkey patch failed"
     from pymongo import MongoClient
     m_client, m_db = connect_to_mongodb(host=mongo_host, port=mongo_port, name=mongo_name)
     if m_client and m_db:
@@ -73,17 +78,17 @@ else:
                 consumer = consumer
             )
             if messages:
-                print "Processing "+str(len(requests))+" stats operations (mostly increments)."
+                print "Processing "+str(len(messages))+" stats operations (mostly increments)."
                 for message in messages:
                     stats = json.loads(message)
                     if verbose:
                         print "Incrementing stats "+str(stats)
                     for stat in stats:
-                        try:
-                            collection = m_db[stat['collection']]
-                            collection.update(stat['attributes'], {'$set': stat['attributes'], '$inc': {'value': 1}}, upsert=True, w=0)
-                        except:
-                            print "Issues with stats upsert"
+                        #try:
+                        collection = m_db[stat['collection']]
+                        collection.update(stat['attributes'], {'$set': stat['attributes'], '$inc': {'value': 1}}, upsert=True, w=0)
+                        #except:
+                        #    print "Issues with stats upsert"
             else:
                 if verbose:
                     print "No tile requests to log"
