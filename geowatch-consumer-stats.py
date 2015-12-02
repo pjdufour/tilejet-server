@@ -10,6 +10,7 @@ from geowatchutil.runtime import acquire_consumer
 from tilejetstats.mongodb import buildStats, incStats
 from tilejetserver.cache.tasks import taskRequestTile
 
+from tilejetserver.geowatch import acquire_geowatch_consumer
 
 def connect_to_mongodb(host=None, port=None, name=None):
     client = None
@@ -36,7 +37,7 @@ def connect_to_mongodb(host=None, port=None, name=None):
 
 verbose=False
 # Initialize Settings
-host = settings.TILEJET_GEOWATCH_HOST
+enabled = settings.TILEJET_GEOWATCH_ENABLED
 topic = settings.TILEJET_GEOWATCH_TOPIC_STATS
 count = settings.TILEJET_GEOWATCH_COUNT_STATS
 mongo_host = settings.TILEJET_MONGODB_HOST
@@ -44,12 +45,8 @@ mongo_port = settings.TILEJET_MONGODB_PORT
 mongo_name = settings.TILEJET_MONGODB_NAME
 list_stats = settings.TILEJET_LIST_STATS
 
-print "GeoWatch Settings"
-print "Host: "+host
-print "Topic: "+topic
-print "Count: "+str(count)
+gw_client, consumer = acquire_geowatch_consumer(topic, max_tries=3, sleep_period=5, verbose=verbose)
 
-gw_client, consumer = acquire_consumer(host=host, topic=topic, max_tries=12, sleep_period=5)
 if not consumer:
     print "Could not get lock on GeoWatch server after "+str(tries)+" tries."
 else:
@@ -70,12 +67,10 @@ else:
         cycle = 0
         while True:
             print "Cycle: "+str(cycle)
-            messages = receive_messages(
-                topic,
-                count = count,
+            messages = consumer.receive_messages_plain(
+                count,
                 timeout = 4,
                 ttl = settings.TILEJET_GEOWATCH_TTL,
-                consumer = consumer
             )
             if messages:
                 print "Processing "+str(len(messages))+" stats operations (mostly increments)."

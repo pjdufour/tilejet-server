@@ -295,6 +295,12 @@ TILEJET_LOGS_REQUEST_ROOT = LOG_REQUEST_ROOT
 TILEJET_GEVENT_MONKEY_PATCH = True
 
 ############################
+# AWS
+AWS_ACCESS_KEY_ID = "XXX"
+AWS_SECRET_ACCESS_KEY = "XXX"
+############################
+
+############################
 # MongoDB
 # Unix Socket Preferred
 # TILEJET_MONGODB_HOST = "'/tmp/mongodb-27017.sock'"
@@ -309,6 +315,12 @@ TILEJET_MONGODB_NAME = 'tilejet'
 
 # GeoWatch
 TILEJET_GEOWATCH_ENABLED = True
+# Use AWS Kinesis as message broker
+TILEJET_GEOWATCH_STREAMING_BACKEND = "kinesis"
+TILEJET_GEOWATCH_KINESIS_REGION = "us-east-1"
+TILEJET_GEOWATCH_KINESIS_STREAM_PREFIX= "tilejet-"
+# Use Apache Kafka instance as message broker
+#TILEJET_GEOWATCH_STREAMING_BACKEND_TYPE = "kafka"
 TILEJET_GEOWATCH_HOST = "localhost:9092"
 TILEJET_GEOWATCH_TTL = 60
 
@@ -318,6 +330,7 @@ TILEJET_GEOWATCH_COUNT_REQUESTS = 1000
 TILEJET_GEOWATCH_SLEEP_REQUESTS = 1
 
 # GeoWatch Logs Daemon
+# This daemon takes in logs and adds to MongoDB
 TILEJET_GEOWATCH_TOPIC_LOGS = "logs"
 TILEJET_GEOWATCH_COUNT_LOGS = 20
 TILEJET_GEOWATCH_SLEEP_LOGS = 1

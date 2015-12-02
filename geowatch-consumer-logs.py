@@ -13,6 +13,7 @@ from tilejetstats.mongodb import buildStats, incStats
 
 from tilejetserver.cache.tasks import taskRequestTile
 
+from tilejetserver.geowatch import acquire_geowatch_consumer
 
 def connect_to_mongodb(host=None, port=None, name=None):
     client = None
@@ -39,6 +40,8 @@ def connect_to_mongodb(host=None, port=None, name=None):
 
 verbose=False
 # Initialize Settings
+enabled = settings.TILEJET_GEOWATCH_ENABLED
+backend = settings.TILEJET_GEOWATCH_STREAMING_BACKEND
 host = settings.TILEJET_GEOWATCH_HOST
 topic_logs = settings.TILEJET_GEOWATCH_TOPIC_LOGS
 count_logs = settings.TILEJET_GEOWATCH_COUNT_LOGS
@@ -55,7 +58,8 @@ print "Input Topic: "+topic_logs
 print "Output Topic: "+topic_stats
 print "Count: "+str(count_logs)
 
-client_consumer, consumer = acquire_consumer(host=host, topic=topic_logs, max_tries=3, sleep_period=5)
+client_consumer, consumer = acquire_geowatch_consumer(topic_logs, max_tries=3, sleep_period=5, verbose=verbose)
+
 if not consumer:
     print "Could not get lock on GeoWatch server after "+str(tries)+" tries."
 else:

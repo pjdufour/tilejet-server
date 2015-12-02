@@ -9,18 +9,15 @@ from geowatchutil.runtime import acquire_consumer
 
 from tilejetserver.cache.tasks import taskRequestTile
 
+from tilejetserver.geowatch import acquire_geowatch_consumer
 
 verbose=False
-host = settings.TILEJET_GEOWATCH_HOST
+enabled = settings.TILEJET_GEOWATCH_ENABLED
+backend = settings.TILEJET_GEOWATCH_STREAMING_BACKEND
 topic = settings.TILEJET_GEOWATCH_TOPIC_REQUESTS
 count = settings.TILEJET_GEOWATCH_COUNT_REQUESTS
 
-print "GeoWatch Settings"
-print "Host: "+host
-print "Topic: "+topic
-print "Count: "+str(count)
-
-client, consumer = acquire_consumer(host=host, topic=topic, max_tries=12, sleep_period=5)
+client, consumer = acquire_geowatch_consumer(topic, max_tries=3, sleep_period=5, verbose=verbose)
 
 if not consumer:
     print "Could not get lock on GeoWatch server after "+str(tries)+" tries."
@@ -30,12 +27,10 @@ else:
     while True:
         seen = set()
         print "Cycle: "+str(cycle)
-        requests = receive_tile_requests(
-            topic,
-            count = count,
+        requests = consumer.receive_tile_requests(
+            count,
             timeout = 4,
             ttl = settings.TILEJET_GEOWATCH_TTL,
-            consumer = consumer
         )
         if requests:
             print "Processing "+str(len(requests))+" indirect tile requests"

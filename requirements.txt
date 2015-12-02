@@ -20,4 +20,5 @@ tilejet-logs
 tilejet-stats
 tilejet-cache
 kafka-python
+boto
 git+git://github.com/geowatch/geowatch-util@master
