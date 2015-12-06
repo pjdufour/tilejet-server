@@ -173,13 +173,11 @@ var formatDate = function(d)
               <table class="table table-striped table-bordered">
                 <thead>
                   <th>Topic</th>
-                  <th>Partitions</th>
                 </thead>
                 <tbody>
                   {% for topic in topics %}
                   <tr>
-                    <td>{{ topic.name }}</td>
-                    <td>{{ topic.partitions }}</td>
+                    <td>{{ topic }}</td>
                   </tr>
                   {% endfor %}
                 </tbody>

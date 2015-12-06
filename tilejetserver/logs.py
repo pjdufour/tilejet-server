@@ -22,7 +22,9 @@ from django.http import Http404
 
 from geojson import Polygon, Feature, FeatureCollection, GeometryCollection
 
-from geowatchutil.producer import connect_and_send
+from geowatchutil.runtime import provision_producer
+
+from geowatchdjango.utils import provision_geowatch_producer
 
 from tilejetstats.mongodb import buildStats, incStats
 from tilejetlogs.tilelogs import buildTileRequestDocument
@@ -31,20 +33,22 @@ from tilejetserver.cache.tasks import taskIncStats
 http_client = httplib2.Http()
 
 
-def logTileRequest(tileorigin, tilesource, x, y, z, ext, status, datetime, ip):
+def logTileRequest(tileorigin, tilesource, x, y, z, ext, status, datetime, ip, gw_logs=None):
     log_root = settings.LOG_REQUEST_ROOT
     log_format = settings.LOG_REQUEST_FORMAT
     if log_root and log_format:
         log_file = log_root+os.sep+"requests_tiles_"+datetime.strftime('%Y-%m-%d')+".tsv"
 
-        with open(log_file,'a') as f:
-            line = log_format.format(status=status,tileorigin=tileorigin,tilesource=tilesource,z=z,x=x,y=y,ext=ext,ip=ip,datetime=datetime.isoformat())
-            f.write(line+"\n")
+        line = log_format.format(status=status,tileorigin=tileorigin,tilesource=tilesource,z=z,x=x,y=y,ext=ext,ip=ip,datetime=datetime.isoformat())
+        # Write to File
+        client, producer = provision_producer("file", path=log_file, codec="GeoWatchCodecPlain", verbose=True)
+        producer.send_text(line)
 
-            connect_and_send(
-                settings.TILEJET_GEOWATCH_HOST,
-                settings.TILEJET_GEOWATCH_TOPIC_LOGS,
-                line)
+        # Write to Log Stream
+        if not gw_logs:
+            topic = settings.TILEJET_GEOWATCH_TOPIC_LOGS
+            client, gw_logs = provision_geowatch_producer(topic, "GeoWatchCodecPlain", max_tries=3, sleep_period=5, verbose=True)
+        gw_logs.send_text(line)
 
 
 def logTileRequest_old(tileorigin, tilesource, x, y, z, status, datetime, ip):

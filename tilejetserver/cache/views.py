@@ -1,4 +1,4 @@
-import json, os, datetime
+import json, os, datetime, time
 
 from django.shortcuts import render_to_response, get_object_or_404, render
 from django.template.loader import render_to_string
@@ -16,17 +16,13 @@ import StringIO
 from PIL import Image, ImageEnhance
 import umemcache
 
-from geowatchutil.producer import send_tile_request, send_tile_requests
-
 from tilejetutil.base import webmercator_bbox
 from tilejetutil.tilemath import flip_y, tms_to_bbox, quadkey_to_tms, tms_to_quadkey, tms_to_geojson
 from tilejetutil.nav import getNearbyTiles, getChildrenTiles, getParentTiles
 from tilejetutil.tilefactory import blankTile, redTile, solidTile
 
 from tilejetlogs.mongodb import clearLogs, reloadLogs
-
 from tilejetstats.mongodb import clearStats, reloadStats
-
 from tilejetcache.cache import getTileFromCache, get_from_cache, check_cache_availability
 
 from .models import TileService
@@ -40,12 +36,16 @@ from tilejetserver.source.models import TileOrigin,TileSource
 from tilejetserver.cache.tasks import taskRequestTile, taskWriteBackTile, taskUpdateStats
 from tilejetserver.cache.forms import TileOriginForm, TileSourceForm, TileServiceForm
 
+from tilejetserver.geowatch import provision_client_logs_requests
+
 import json
 from bson.json_util import dumps
 
 from geojson import Polygon, Feature, FeatureCollection, GeometryCollection
 
 import time
+
+from geowatchdjango.utils import provision_geowatch_client
 
 def render(request, template='capabilities/services.html', ctx=None, contentType=None):
     if not (contentType is None):
@@ -469,18 +469,20 @@ def info(request):
     except:
         print "Could not build scheduled tasks.  Is celery beat running?"
 
-    topics = []
-    try:
-        from kafka import KafkaClient
-        kafka = KafkaClient(settings.TILEJET_GEOWATCH_HOST)
-        for topic in kafka.topics:
-            topic2 = {
-                'name': topic,
-                'partitions': len(kafka.topic_partitions.get(topic, []))
-            }
-            topics.append(topic2)
-    except:
-        print "Could not generate topics.  Is Kafka offline?"
+    #topics = []
+    #try:
+    #    from kafka import KafkaClient
+    #    kafka = KafkaClient(settings.TILEJET_GEOWATCH_HOST)
+    #    for topic in kafka.topics:
+    #        topic2 = {
+    #            'name': topic,
+    #            'partitions': len(kafka.topic_partitions.get(topic, []))
+    #        }
+    #        topics.append(topic2)
+    #except:
+    #    print "Could not generate topics.  Is Kafka offline?"
+    client = provision_geowatch_client()
+    topics = client.list_topics()
 
     context_dict = {
         'origins': getTileOrigins(),
@@ -930,34 +932,17 @@ def tile_tms(request, slug=None, z=None, x=None, y=None, u=None, ext=None):
 
 def requestIndirectTiles(tilesource, ext, tiles, now):
     if tiles:
-        if settings.TILEJET_GEOWATCH_ENABLED:
-            #try:
-            if True:
-                if settings.TILEJET_GEOWATCH_ENABLED:
-                   send_tile_requests(
-                       settings.TILEJET_GEOWATCH_TOPIC_REQUESTS,
-                       str(tilesource['id']),
-                       tiles,
-                       extension=ext,
-                       host = settings.TILEJET_GEOWATCH_HOST,
-                       now = now
-                    )
-            #except:
-            #    print "Error: Could not connect to indirect request queue."
-            #    line = "Error: Could not connect to indirect request queue."
-            #    logTileRequestError(line, now)
-        else:
-            for t in tiles:
-                tx, ty, tz = t
-                #taskRequestTile.delay(tilesource.id, tz, tx, ty, ext)
-                args = [tilesource['id'], tz, tx, ty, ext]
-                #Expires handled by global queue setting
-                try:
-                    taskRequestTile.apply_async(args=args, kwargs=None, queue="requests")
-                except:
-                    print "Error: Could not connect to indirect request queue."
-                    line = "Error: Could not connect to indirect request queue."
-                    logTileRequestError(line, now)
+        for t in tiles:
+            tx, ty, tz = t
+            #taskRequestTile.delay(tilesource.id, tz, tx, ty, ext)
+            args = [tilesource['id'], tz, tx, ty, ext]
+            #Expires handled by global queue setting
+            try:
+                taskRequestTile.apply_async(args=args, kwargs=None, queue="requests")
+            except:
+                print "Error: Could not connect to indirect request queue."
+                line = "Error: Could not connect to indirect request queue."
+                logTileRequestError(line, now)
 
 
 def _requestTile(request, tileservice=None, tilesource=None, tileorigin=None, z=None, x=None, y=None, u=None, ext=None):
@@ -974,12 +959,13 @@ def _requestTile(request, tileservice=None, tilesource=None, tileorigin=None, z=
     iy = None
     iyf = None
     iz = None
+    indirectTiles = None
     nearbyTiles = None
     parentTiles = None
     childrenTiles = None
-
-    #if verbose:
-    #    print request.path
+    gw_client, gw_logs, gw_requests = None, None, None
+    if settings.GEOWATCH_ENABLED:
+        gw_client, gw_logs, gw_requests = provision_client_logs_requests()
 
     if u:
         iz, ix, iy = quadkey_to_tms(u)
@@ -998,11 +984,14 @@ def _requestTile(request, tileservice=None, tilesource=None, tileorigin=None, z=
 
     if tilesource['cacheable']:
 
+        indirectTiles = []
+
         if settings.TILEJET['heuristic']['nearby']['enabled']:
             ir = settings.TILEJET['heuristic']['nearby']['radius']
             nearbyTiles = getNearbyTiles(ix, iy, iz, ir)
-            #print "Nearby Tiles"
-            #print nearbyTiles
+            indirectTiles.extend(nearbyTiles)
+            #print "Nearby Tiles", nearbyTiles
+            #print "Indirect Tiles", indirectTiles
 
         if settings.TILEJET['heuristic']['up']['enabled']:
             iDepth = getValue(settings.TILEJET['heuristic']['up'],'depth')
@@ -1010,6 +999,7 @@ def _requestTile(request, tileservice=None, tilesource=None, tileorigin=None, z=
                 parentTiles = getParentTiles(ix, iy, iz, depth=iDepth)
             else:
                 parentTiles = getParentTiles(ix, iy, iz)
+            indirectTiles.extend(parentTiles)
             #print "Parent Tiles"
             #print parentTiles
 
@@ -1019,12 +1009,19 @@ def _requestTile(request, tileservice=None, tilesource=None, tileorigin=None, z=
             minZoom = heuristic_down['minZoom']
             maxZoom = heuristic_down['maxZoom']
             childrenTiles = getChildrenTiles(ix, iy, iz, depth, minZoom, maxZoom)
+            indirectTiles.extend(childrenTiles)
             #print "Children Tiles: "+str(len(childrenTiles))
             #print childrenTiles
 
-        requestIndirectTiles(tilesource, ext, nearbyTiles, now)
-        requestIndirectTiles(tilesource, ext, parentTiles, now)
-        requestIndirectTiles(tilesource, ext, childrenTiles, now)
+        #print "indirectTiles: ", indirectTiles
+        if gw_requests and indirectTiles:
+            start = time.time()
+            gw_requests.send_tile_requests(
+                str(tilesource['id']),
+                indirectTiles,
+                extension=ext,
+                now=now)
+            print "Duration Q: ", (time.time() - start)
 
     #Check if requested tile is within source's extents
     returnBlankTile = False
@@ -1081,11 +1078,11 @@ def _requestTile(request, tileservice=None, tilesource=None, tileorigin=None, z=
         if tile:
             if verbose:
                 print "cache hit for "+key
-            logTileRequest(tileorigin, tilesource['name'], x, y, z, ext, 'hit', now, ip)
+            logTileRequest(tileorigin, tilesource['name'], x, y, z, ext, 'hit', now, ip, gw_logs=gw_logs)
         else:
             if tilecache and verbose:
                 print "cache miss for "+key
-            logTileRequest(tileorigin, tilesource['name'], x, y, z, ext, 'miss', now, ip)
+            logTileRequest(tileorigin, tilesource['name'], x, y, z, ext, 'miss', now, ip, gw_logs=gw_logs)
 
             if tilesource['type'] == TYPE_TMS:
                 tile = requestTileFromSource(tilesource=tilesource,x=ix,y=iy,z=iz,ext=ext,verbose=True)
@@ -1116,7 +1113,7 @@ def _requestTile(request, tileservice=None, tilesource=None, tileorigin=None, z=
     else:
         if verbose:
             print "cache bypass for "+tilesource['name']+"/"+str(iz)+"/"+str(ix)+"/"+str(iy)
-        logTileRequest(tileorigin, tilesource['name'], x, y, z, ext, 'bypass', now, ip)
+        logTileRequest(tileorigin, tilesource['name'], x, y, z, ext, 'bypass', now, ip, gw_logs=gw_logs)
 
         if tilesource['type'] == TYPE_TMS:
             tile = requestTileFromSource(tilesource=tilesource,x=ix,y=iy,z=iz,ext=ext,verbose=True)

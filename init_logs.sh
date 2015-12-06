@@ -1,5 +1,6 @@
 mkdir logs
 mkdir logs/celery
+mkdir logs/cron
 mkdir logs/errors 
 mkdir logs/gunicorn 
 mkdir logs/kafka

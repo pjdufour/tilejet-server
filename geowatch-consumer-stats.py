@@ -1,91 +1,31 @@
-import json
-import time
-
 from django.conf import settings
 
-from geowatchutil.client import create_client
-from geowatchutil.consumer import create_consumer, receive_tile_requests, decode_tile_request, receive_messages
-from geowatchutil.runtime import acquire_consumer
+from geowatchdjango.utils import provision_geowatch_consumer
 
-from tilejetstats.mongodb import buildStats, incStats
-from tilejetserver.cache.tasks import taskRequestTile
+from tilejetserver.broker import TileJetBrokerStats
 
-from tilejetserver.geowatch import acquire_geowatch_consumer
-
-def connect_to_mongodb(host=None, port=None, name=None):
-    client = None
-    db = None
-    try:
-        if port:
-            client = MongoClient(host, port)
-        else:
-            client = MongoClient(host)
-    except:
-        client = None
-    if client:
-        try:
-            db = client[name]
-        except:
-            db = None
-            try:
-                client.close()
-            except:
-                client = None
-            client = None
-    return (client, db)
-
-
-verbose=False
-# Initialize Settings
-enabled = settings.TILEJET_GEOWATCH_ENABLED
+verbose = True
+enabled = settings.GEOWATCH_ENABLED
 topic = settings.TILEJET_GEOWATCH_TOPIC_STATS
 count = settings.TILEJET_GEOWATCH_COUNT_STATS
-mongo_host = settings.TILEJET_MONGODB_HOST
-mongo_port = settings.TILEJET_MONGODB_PORT
-mongo_name = settings.TILEJET_MONGODB_NAME
-list_stats = settings.TILEJET_LIST_STATS
-
-gw_client, consumer = acquire_geowatch_consumer(topic, max_tries=3, sleep_period=5, verbose=verbose)
+sleep_period = settings.TILEJET_GEOWATCH_SLEEP_STATS
+mongodb_host = settings.TILEJET_MONGODB_HOST
+mongodb_port = settings.TILEJET_MONGODB_PORT
+mongodb_name = settings.TILEJET_MONGODB_NAME
+timeout = 5
+max_tries = 3
+client, consumer = provision_geowatch_consumer(topic, "GeoWatchCodecJSON", max_tries=max_tries, sleep_period=sleep_period, topic_check=False, verbose=verbose)
 
 if not consumer:
-    print "Could not get lock on GeoWatch server after "+str(tries)+" tries."
+    print "Could not get lock on GeoWatch server after "+str(max_tries)+" tries."
 else:
-    print "Consumer locked.  Starting consuming message"
-    # ! Cannot Gevent Monkey Patch, since it's not comaptible with python-kafka
-    # ! also the benefits might that be great for a consumer, since it isn't part of 
-    # ! request/response cycle
-    # !
-    # Import Gevent and monkey patch
-    #try:
-    #    from gevent import monkey
-    #    monkey.patch_all()
-    #except:
-    #    print "gevent monkey patch failed"
-    from pymongo import MongoClient
-    m_client, m_db = connect_to_mongodb(host=mongo_host, port=mongo_port, name=mongo_name)
-    if m_client and m_db:
-        cycle = 0
-        while True:
-            print "Cycle: "+str(cycle)
-            messages = consumer.receive_messages_plain(
-                count,
-                timeout = 4,
-                ttl = settings.TILEJET_GEOWATCH_TTL,
-            )
-            if messages:
-                print "Processing "+str(len(messages))+" stats operations (mostly increments)."
-                for message in messages:
-                    stats = json.loads(message)
-                    if verbose:
-                        print "Incrementing stats "+str(stats)
-                    for stat in stats:
-                        #try:
-                        collection = m_db[stat['collection']]
-                        collection.update(stat['attributes'], {'$set': stat['attributes'], '$inc': {'value': 1}}, upsert=True, w=0)
-                        #except:
-                        #    print "Issues with stats upsert"
-            else:
-                if verbose:
-                    print "No tile requests to log"
-            cycle += 1
-            time.sleep(settings.TILEJET_GEOWATCH_SLEEP_STATS)
+    broker = TileJetBrokerStats(
+        consumer=consumer,
+        sleep_period=sleep_period,
+        count=count,
+        timeout=timeout,
+        mongodb_host=mongodb_host,
+        mongodb_port=mongodb_port,
+        mongodb_name=mongodb_name,
+        verbose=verbose)
+    broker.run()

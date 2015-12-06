@@ -1,81 +1,34 @@
+import time
 from django.conf import settings
 
-from geowatchutil.runtime import acquire_consumer
+from geowatchdjango.utils import provision_geowatch_client, provision_geowatch_producer
 
-def acquire_geowatch_consumer(topic, max_tries=12, sleep_period=5, verbose=True):
-    backend = settings.TILEJET_GEOWATCH_STREAMING_BACKEND
-    topic_prefix = settings.TILEJET_GEOWATCH_TOPIC_PREFIX
-    # Kinesis
-    aws_access_key_id=settings.AWS_ACCESS_KEY_ID
-    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY
-    region = settings.TILEJET_GEOWATCH_KINESIS_REGION
-    # Kafka
-    host = settings.TILEJET_GEOWATCH_HOST
 
-    print "GeoWatch Settings"
-    print "Host: "+host
-    print "Topic: "+topic
-    print "Count: "+str(count)
-
-    client = None
-    consumer = None
-    if backend == "kafka"
-        client, consumer = acquire_consumer_kafka(
-            backend,
-            host=host,
-            topic=topic,
-            topic_prefix=topic_prefix,
-            max_tries=max_tries,
-            sleep_period=sleep_period)
-    elif backend == "kinesis"
-        client, consumer = acquire_consumer_kinesis(
-            backend,
-            aws_region=aws_region,
-            aws_access_key_id=aws_acccess_key_id,
-            aws_secret_access_key=aws_secret_access_key,
-            topic=topic,
-            topic_prefix=topic_prefix,
-            max_tries=max_tries,
-            sleep_period=sleep_period
-        )
-
-    return (client, consumer)
-
-def acquire_geowatch_producer(topic, verbose=True):
-    backend = settings.TILEJET_GEOWATCH_STREAMING_BACKEND
-    topic_prefix = settings.TILEJET_GEOWATCH_TOPIC_PREFIX
-    # Kinesis
-    aws_access_key_id=settings.AWS_ACCESS_KEY_ID
-    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY
-    region = settings.TILEJET_GEOWATCH_KINESIS_REGION
-    # Kafka
-    host = settings.TILEJET_GEOWATCH_HOST
-
-    print "GeoWatch Settings"
-    print "Host: "+host
-    print "Topic: "+topic
-    print "Count: "+str(count)
-
-    client = None
-    producer = None
-    if backend == "kafka"
-        client, producer = acquire_producer_kafka(
-            backend,
-            host=host,
-            topic=topic,
-            topic_prefix=topic_prefix,
-            max_tries=max_tries,
-            sleep_period=sleep_period)
-    elif backend == "kinesis"
-        client, producer = acquire_producer_kinesis(
-            backend,
-            aws_region=aws_region,
-            aws_access_key_id=aws_acccess_key_id,
-            aws_secret_access_key=aws_secret_access_key,
-            topic=topic,
-            topic_prefix=topic_prefix,
-            max_tries=max_tries,
-            sleep_period=sleep_period
-        )
-
-    return (client, producer)
+def provision_client_logs_requests(topic_check=False, verbose=False):
+    start = time.time()
+    gw_client = provision_geowatch_client()
+    end = time.time()
+    print "Duration 1: ", (end - start)
+    start = end
+    gw_client, gw_requests = provision_geowatch_producer(
+        settings.TILEJET_GEOWATCH_TOPIC_REQUESTS,
+        "GeoWatchCodecTileRequest",
+        client=gw_client,
+        max_tries=5,
+        sleep_period=0.25,
+        topic_check=topic_check,
+        verbose=verbose)
+    end = time.time()
+    print "Duration 2: ", (end - start)
+    start = end
+    gw_client, gw_logs = provision_geowatch_producer(
+        settings.TILEJET_GEOWATCH_TOPIC_LOGS,
+        "GeoWatchCodecPlain",
+        client=gw_client,
+        max_tries=5,
+        sleep_period=0.25,
+        topic_check=topic_check,
+        verbose=verbose)
+    end = time.time()
+    print "Duration 3: ", (end - start)
+    return (gw_client, gw_logs, gw_requests)

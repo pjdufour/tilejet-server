@@ -62,6 +62,7 @@ INSTALLED_APPS = (
     'corsheaders',
     #'leaflet',
     'jquery',
+    'geowatchdjango',
 
 ) + TILEJET_APPS
 
@@ -222,13 +223,14 @@ CELERY_QUEUES = (
 )
 
 #CELERYBEAT_SCHEDULER = "djcelery.schedulers.DatabaseScheduler"
-CELERYBEAT_SCHEDULE = {
-    "updateStats": {
-        "task": "tilejetserver.cache.tasks.taskUpdateStats",
-        "schedule": crontab(minute='*/1'),
-        "args": (),
-    },
-}
+CELERYBEAT_SCHEDULE = {}
+#CELERYBEAT_SCHEDULE = {
+#    "updateStats": {
+#        "task": "tilejetserver.cache.tasks.taskUpdateStats",
+#        "schedule": crontab(minute='*/1'),
+#        "args": (),
+#    },
+#}
 
 # Tile Request Logs
 LOG_REQUEST_ROOT = BASE_DIR+'/logs/requests'
@@ -314,14 +316,12 @@ TILEJET_MONGODB_NAME = 'tilejet'
 ############################
 
 # GeoWatch
-TILEJET_GEOWATCH_ENABLED = True
-# Use AWS Kinesis as message broker
-TILEJET_GEOWATCH_STREAMING_BACKEND = "kinesis"
-TILEJET_GEOWATCH_KINESIS_REGION = "us-east-1"
-TILEJET_GEOWATCH_KINESIS_STREAM_PREFIX= "tilejet-"
-# Use Apache Kafka instance as message broker
-#TILEJET_GEOWATCH_STREAMING_BACKEND_TYPE = "kafka"
-TILEJET_GEOWATCH_HOST = "localhost:9092"
+GEOWATCH_ENABLED = True
+GEOWATCH_STREAMING_BACKEND = "kinesis"
+GEOWATCH_TOPIC_PREFIX= "tilejet-"
+# GEOWATCH_KINESIS_REGION = "us-east-1"
+GEOWATCH_KINESIS_REGION = "us-west-1"
+GEOWATCH_HOST = "localhost:9092"
 TILEJET_GEOWATCH_TTL = 60
 
 # GeoWatch Requests Daemon
@@ -332,10 +332,14 @@ TILEJET_GEOWATCH_SLEEP_REQUESTS = 1
 # GeoWatch Logs Daemon
 # This daemon takes in logs and adds to MongoDB
 TILEJET_GEOWATCH_TOPIC_LOGS = "logs"
-TILEJET_GEOWATCH_COUNT_LOGS = 20
-TILEJET_GEOWATCH_SLEEP_LOGS = 1
+TILEJET_GEOWATCH_COUNT_LOGS = 40
+TILEJET_GEOWATCH_SLEEP_LOGS = 5
 
 # GeoWatch Statistics Daemon
 TILEJET_GEOWATCH_TOPIC_STATS = "statistics"
 TILEJET_GEOWATCH_COUNT_STATS = 100
-TILEJET_GEOWATCH_SLEEP_STATS = 5
+TILEJET_GEOWATCH_SLEEP_STATS = 15
+
+# How long to wait for each sleep cycle when done updating stats
+#TILEJET_SLEEP_UPDATE_STATS = 900 # 900 seconds = 15 minutes
+TILEJET_SLEEP_UPDATE_STATS = 30
